@@ -1,0 +1,83 @@
+DROP TABLE IF EXISTS articles;
+
+#########################################
+
+CREATE EXTERNAL TABLE articles (
+    label STRING,
+    text_body STRING
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE
+LOCATION '/user/cloudera/hive_input/';
+
+#########################################
+
+
+SELECT
+    label,
+    COUNT(1) AS total_articles
+FROM
+    articles
+WHERE
+    label = 'TRUE' OR label = 'FAKE'
+GROUP BY
+    label;
+
+#########################################
+
+
+SELECT
+    label,
+    cleaned_word,
+    COUNT(1) AS word_count
+FROM (
+    -- Étape 1 : Sous-requête pour "exploser" le texte en mots
+    SELECT
+        label,
+        -- Étape 1b : Nettoyer le mot (minuscule + enlever ponctuation)
+        LOWER(regexp_replace(word, '[^a-zA-Z]', '')) AS cleaned_word
+    FROM
+        articles
+        -- C'est la magie : "flatMap" en SQL.
+        -- split() crée un tableau de mots.
+        -- explode() transforme ce tableau en lignes.
+        LATERAL VIEW explode(split(text_body, ' ')) exploded_table AS word
+    WHERE
+        label = 'TRUE' OR label = 'FAKE'
+) subquery
+-- Étape 2 : Filtrer les mots courts (notre filtre "stop words")
+WHERE
+    LENGTH(cleaned_word) > 4
+-- Étape 3 : GROUP BY (le "Reduce")
+GROUP BY
+    label, cleaned_word
+-- Étape 4 : ORDONNER pour voir les plus pertinents
+ORDER BY
+    word_count DESC
+-- Étape 5 : Limiter les résultats
+LIMIT 100;
+
+
+#########################################
+
+
+SELECT
+    label,
+    -- Compte conditionnel (très puissant en SQL)
+    SUM(CASE WHEN LOWER(text_body) LIKE '%trump%' THEN 1 ELSE 0 END) AS mentions_trump,
+    SUM(CASE WHEN LOWER(text_body) LIKE '%clinton%' THEN 1 ELSE 0 END) AS mentions_clinton,
+    SUM(CASE WHEN LOWER(text_body) LIKE '%russia%' THEN 1 ELSE 0 END) AS mentions_russia,
+    
+    -- Le total pour calculer le pourcentage
+    COUNT(1) AS total_articles
+FROM
+    articles
+WHERE
+    label = 'TRUE' OR label = 'FAKE'
+GROUP BY
+    label;
+
+
+
+
