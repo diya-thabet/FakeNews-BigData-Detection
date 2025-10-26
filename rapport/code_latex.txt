@@ -1,0 +1,252 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- PAQUETS ESSENTIELS ---
+% Géométrie de la page (marges)
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry} 
+
+% --- GESTION DES LANGUES ET POLICES ---
+\usepackage{fontspec}      % Permet de charger des polices modernes
+\usepackage[french]{babel} % Charger Babel avec l'option de langue principale ici
+
+% Définition de la langue principale et des polices
+\babelprovide[import, onchar=ids fonts]{french} % Fournir les configurations spécifiques si nécessaire
+\babelprovide[import, onchar=ids fonts]{english} % Au cas où
+
+% Police "Noto Sans" : moderne, lisible et complète (sans-serif)
+\babelfont{rm}{Noto Sans} 
+
+% Correction pour les listes en français (très important)
+\usepackage{enumitem}
+\setlist[itemize]{label=-}
+
+% --- PAQUETS POUR LA MISE EN FORME ---
+\usepackage{booktabs}      % Pour de beaux tableaux (barres \toprule, \midrule, \bottomrule)
+\usepackage{graphicx}      % Pour les images (si nécessaire, mais pas d'URL)
+\usepackage{hyperref}      % Pour les liens cliquables (table des matières, URLs)
+\hypersetup{
+    colorlinks=true,       % Mettre true pour voir les liens
+    urlcolor=blue,         % Couleur des URLs
+    linkcolor=black,       % Couleur des liens internes (TOC)
+    citecolor=black,       % Couleur des citations (non utilisé ici)
+    pdftitle={Rapport de Projet: Analyse de Données Massives},
+    pdfauthor={Mohamed Dhia Eddine Thabet, Mohamed Dridi} % Mis à jour
+}
+\usepackage{array}         % Outils avancés pour les tableaux
+\usepackage{parskip}       % Utilise des sauts de ligne entre les paragraphes au lieu d'indentation
+\usepackage{url}           % Pour afficher correctement les URLs
+
+% --- INFORMATIONS DU DOCUMENT ---
+\title{
+    \Huge Rapport de Projet : Analyse de Données Massives \\
+    \vspace{1cm}
+    \LARGE L'Écosystème Hadoop et Spark pour la Détection de "Fake News"
+}
+
+\author{
+    \Large Mohamed Dhia Eddine Thabet \\
+    \Large Mohamed Dridi \\ % Ajout du coéquipier
+    \vspace{5mm}
+    \normalsize École Nationale d'Ingénieurs de Carthage (ENICarthage) \\ % Ajout de l'école
+    \normalsize 3ème année cycle d'ingénieurs informatique -- Classe B \\ % Ajout de "informatique"
+    \normalsize Année Universitaire 2025-2026
+}
+
+\date{\today}
+
+% =============================
+% --- DÉBUT DU DOCUMENT ---
+% =============================
+\begin{document}
+
+% --- Page de Titre ---
+\begin{titlepage}
+    \maketitle
+    \vfill % Pousse le contenu vers le bas
+    % Image supprimée car les URLs externes ne sont pas supportées
+    \vfill
+\end{titlepage}
+
+\clearpage
+
+% --- Table des Matières ---
+\tableofcontents
+\clearpage
+
+% =============================
+% --- SECTIONS DU RAPPORT ---
+% =============================
+
+\section{Introduction}
+
+L'avènement du Big Data a transformé notre capacité à traiter l'information. Cependant, l'augmentation du volume s'est accompagnée d'une augmentation de la désinformation ("Fake News"). Ce projet vise à mettre en œuvre une chaîne de traitement de données complète pour analyser et comparer les caractéristiques linguistiques des articles de presse authentiques et des articles de désinformation.
+
+L'objectif principal est de comparer quatre technologies fondamentales de l'écosystème Big Data : \textbf{Hadoop MapReduce}, \textbf{Apache Pig}, \textbf{Apache Hive} et \textbf{Apache Spark}.
+
+\subsection{Problématique et Jeu de Données}
+
+Nous avons utilisé le jeu de données "Fake and Real News" disponible sur Kaggle\footnote{\url{https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset}}. Ce corpus contient environ 45 000 articles de presse, séparés en deux fichiers :
+\begin{itemize}
+    \item \texttt{True.csv} : Plus de 21 000 articles vérifiés.
+    \item \texttt{Fake.csv} : Plus de 23 000 articles de désinformation.
+\end{itemize}
+Chaque article comprend un titre, un corps de texte, un sujet et une date. Notre analyse se concentre sur le \textbf{corps du texte} pour y trouver des signatures lexicales distinctives.
+
+\subsection{Objectif d'Analyse}
+L'objectif central est de réaliser une analyse de fréquence de mots (WordCount) sur l'ensemble du corpus, en séparant les résultats par catégorie ("FAKE" ou "TRUE").
+
+\section{Environnement Technique et Défis Rencontrés}
+
+La mise en place de l'environnement de développement pour ce projet a constitué un défi significatif, principalement dû à l'utilisation d'une Machine Virtuelle (VM) Cloudera Quickstart basée sur une version obsolète de CentOS (CentOS 6).
+
+\subsection{Problématiques de la VM Cloudera}
+Peu après le début du projet, il est apparu que l'environnement fourni présentait plusieurs limitations majeures :
+\begin{itemize}
+    \item \textbf{Gestionnaire de Paquets \texttt{yum} Inopérant :} CentOS 6 étant en fin de vie ("End-of-Life"), ses dépôts de paquets officiels ont été archivés ou supprimés. Le gestionnaire \texttt{yum} était donc incapable de télécharger ou d'installer de nouveaux logiciels, y compris des outils de base comme \texttt{unrar} (nécessaire pour décompresser l'archive du dataset) ou \texttt{git}.
+    \item \textbf{Erreurs de Certificats SSL :} Les tentatives de réparation de \texttt{yum} en le redirigeant vers les serveurs d'archives ont échoué en raison de problèmes de validation des certificats SSL. La chaîne de confiance de cette vieille distribution n'était plus compatible avec les certificats modernes.
+\end{itemize}
+
+\subsection{Solutions et Contournements}
+Plusieurs stratégies ont été employées pour surmonter ces obstacles :
+\begin{enumerate}
+    \item \textbf{Réparation des Dépôts \texttt{yum} :} Des manipulations manuelles des fichiers de configuration (\texttt{.repo}) ont été nécessaires pour pointer vers les URLs des archives (\texttt{vault.centos.org}, \texttt{archives.fedoraproject.org}).
+    \item \textbf{Désactivation de la Vérification SSL :} Pour contourner les erreurs de certificat, la vérification SSL a dû être désactivée globalement dans la configuration de \texttt{yum} (\texttt{sslverify=false} dans \texttt{yum.conf}).
+    \item \textbf{Forçage du Protocole HTTP :} En dernier recours, les URLs des dépôts ont été modifiées pour utiliser \texttt{http} au lieu de \texttt{https}, évitant ainsi complètement la négociation SSL.
+    \item \textbf{Utilisation de la Machine Hôte :} Pour certaines tâches (comme la décompression initiale de l'archive \texttt{.rar}), il a été plus simple d'utiliser la machine hôte (exécutant un OS moderne) et de transférer les fichiers résultants (\texttt{.csv}) vers la VM via \texttt{scp} (Secure Copy).
+\end{enumerate}
+Ces étapes, bien que fastidieuses, ont permis de rendre l'environnement de la VM suffisamment fonctionnel pour installer les prérequis manquants et exécuter les différentes briques logicielles (Hadoop, Pig, Hive, Spark Shell).
+
+\subsection{Gestion de Version avec Git}
+Malgré l'impossibilité d'installer \texttt{git} directement sur la VM, le code source du projet (scripts Python, Java, PigLatin, HiveQL) a été développé sur la machine hôte et géré via un dépôt Git. Cela a permis un suivi des versions et une organisation claire du code. Les fichiers étaient ensuite transférés vers la VM pour exécution via \texttt{scp} ou des dossiers partagés (dans le cas d'une alternative Docker qui a été envisagée). L'utilisation de Git garantit également la disponibilité publique et la reproductibilité du projet. Le code source est disponible sur GitHub : \url{https://github.com/diya-thabet/FakeNews-BigData-Detection.git}
+
+\section{Préparation des Données (ETL)}
+
+L'analyse de données textuelles brutes issues de fichiers CSV présente un défi majeur. Les virgules, guillemets et sauts de ligne à l'intérieur du texte des articles rendent le parsing par des outils distribués (comme MapReduce) complexe et sujet aux erreurs.
+
+Pour résoudre ce problème, une étape de pré-traitement (ETL - Extract, Transform, Load) a été nécessaire :
+\begin{enumerate}
+    \item \textbf{Extraction :} Les fichiers \texttt{Fake.csv} et \texttt{True.csv} ont été lus.
+    \item \textbf{Transformation :} Un script Python a été utilisé pour extraire uniquement le label ("TRUE" ou "FAKE") et le corps de l'article. Le tout a été nettoyé et formaté en un seul fichier \texttt{articles.tsv}. Ce format utilise une tabulation (\texttt{\textbackslash t}) comme séparateur, un caractère beaucoup plus fiable pour le traitement de texte libre.
+    \item \textbf{Chargement :} Le fichier \texttt{articles.tsv} (approx. 110MB) a été chargé sur le système de fichiers distribué HDFS, le rendant accessible à MapReduce, Pig, Hive et Spark.
+\end{enumerate}
+
+\section{Mission 2 : Implémentation MapReduce (Java)}
+
+Le paradigme MapReduce est le fondement historique de l'écosystème Hadoop. Il divise un problème en deux phases distinctes, exécutées en parallèle sur un cluster.
+
+\begin{itemize}
+    \item \textbf{Phase Map (Mappeur) :} Le Mappeur lit le fichier \texttt{articles.tsv} ligne par ligne. Pour chaque ligne, il nettoie le texte (minuscules, suppression de la ponctuation) et le "tokenise" (sépare en mots). Il émet ensuite une paire clé-valeur où la clé est composite (\texttt{<Label, Mot>}) et la valeur est \texttt{1}. \\
+    \emph{Exemple de sortie : <("FAKE", "trump"), 1>}
+
+    \item \textbf{Phase Reduce (Réducteur) :} Après une phase de tri et de mélange ("Shuffle"), le Réducteur reçoit toutes les valeurs pour une clé identique. Sa seule tâche est de les agréger (ici, en faire la somme) pour obtenir le compte total. \\
+    \emph{Exemple d'entrée : <("FAKE", "trump"), [1, 1, 1, ...]>} \\
+    \emph{Exemple de sortie : <("FAKE", "trump"), 73933>}
+\end{itemize}
+\textbf{Conclusion :} MapReduce est extrêmement robuste et scalable, mais s'avère très "verbeux" : il a nécessité trois fichiers Java distincts (Mapper, Reducer, Driver) pour une tâche conceptuellement simple.
+
+\section{Mission 3 : Abstraction de Haut Niveau (Pig \& Hive)}
+
+Pig et Hive ont été créés pour simplifier le développement sur Hadoop en masquant la complexité de MapReduce.
+
+\subsection{Apache Pig (Le Dataflow)}
+Pig utilise un langage de script (PigLatin) qui décrit un \emph{flux de traitement de données} (dataflow). Notre tâche de WordCount, qui nécessitait des centaines de lignes en Java, a été réduite à un script d'une dizaine de lignes :
+\begin{enumerate}
+    \item \textbf{LOAD :} Charger \texttt{articles.tsv} depuis HDFS.
+    \item \textbf{FOREACH...GENERATE :} Appliquer le nettoyage, la \textbf{TOKENIZE} (tokenisation) et le \textbf{FLATTEN} (aplatissement des mots en lignes).
+    \item \textbf{FILTER :} Supprimer les mots trop courts (stop words).
+    \item \textbf{GROUP BY :} Regrouper par clé composite \texttt{(label, mot)}.
+    \item \textbf{FOREACH...GENERATE :} Appliquer la fonction \textbf{COUNT} sur chaque groupe.
+    \item \textbf{ORDER BY / DUMP :} Trier et afficher les résultats.
+\end{enumerate}
+Pig a automatiquement converti ce script en jobs MapReduce optimisés. Il s'est avéré être l'outil le plus intuitif et le plus efficace pour cette tâche spécifique de NLP.
+
+\subsection{Apache Hive (L'Entrepôt de Données SQL)}
+Hive fournit une interface SQL pour interroger des données sur HDFS. Pour notre analyse, nous avons créé une table externe pointant vers notre dossier \texttt{hive\_input} (contenant \texttt{articles.tsv}).
+
+Nous avons ensuite pu réimplémenter le WordCount en pur SQL (HiveQL) grâce à des fonctions avancées :
+\begin{itemize}
+    \item \textbf{\texttt{LATERAL VIEW explode(split(text\_body, ' '))}} : Cette combinaison de fonctions est le cœur du "Map". Elle prend le corps du texte, le divise en un tableau de mots (\texttt{split}), puis transforme ce tableau en lignes individuelles (\texttt{explode}).
+    \item \textbf{\texttt{GROUP BY label, cleaned\_word}} : C'est la phase "Reduce", qui regroupe les lignes identiques pour le comptage.
+\end{itemize}
+Hive s'est montré très puissant, prouvant qu'il pouvait gérer des tâches ETL complexes au-delà des simples agrégations de type "Business Intelligence".
+
+\section{Mission 4 : Implémentation Modernisée (Spark)}
+
+Apache Spark est l'évolution moderne de MapReduce. Sa force principale est le traitement \emph{in-memory} (en mémoire vive), le rendant jusqu'à 100 fois plus rapide que MapReduce, qui écrit sur le disque à chaque étape.
+
+L'implémentation a été réalisée en PySpark sur Google Colab, contournant les limitations de la VM pour cette partie. La logique est basée sur les \textbf{RDD (Resilient Distributed Datasets)}, des collections de données immuables et distribuées.
+
+La chaîne de traitement était la suivante :
+\begin{enumerate}
+    \item \textbf{baseRDD :} Créé en chargeant \texttt{articles.tsv} depuis le stockage (`sc.textFile(...)`).
+    \item \textbf{pairedRDD :} Créé en appliquant une transformation \texttt{.flatMap(...)}. Cette seule étape a réalisé le parsing, le nettoyage, la tokenisation et la création des paires \texttt{<clé, 1>} (le "Map").
+    \item \textbf{countsRDD :} Créé en appliquant \texttt{.reduceByKey(...)}. Cette transformation a regroupé et additionné toutes les valeurs pour chaque clé (le "Reduce").
+    \item \textbf{Action :} L'action \texttt{.take(100)} a finalement déclenché l'ensemble du calcul (évaluation paresseuse) et retourné les 100 premiers résultats.
+\end{enumerate}
+Spark combine la puissance bas-niveau de MapReduce avec l'élégance et la concision des API fonctionnelles, tout en offrant des performances largement supérieures.
+
+\section{Analyse des Résultats}
+
+L'exécution du job Spark a fourni une liste des mots les plus fréquents pour chaque catégorie. Cette liste, bien que simple, révèle des signatures linguistiques très claires et convaincantes.
+
+\subsection{Tableau Comparatif (Top 15 des Mots)}
+
+Voici un extrait du Top 15 des termes uniques les plus fréquents pour chaque catégorie, après filtrage des "stop words" les plus courants (comme "about", "their", "more", etc.).
+
+\begin{table}[h!]
+\centering
+\begin{tabular}{l l r | l l r}
+\toprule
+\multicolumn{3}{c}{\textbf{Articles "FAKE"} (Désinformation)} & \multicolumn{3}{c}{\textbf{Articles "TRUE"} (Authentiques)} \\
+\cmidrule(r){1-3} \cmidrule(l){4-6}
+Rang & Mot & Fréquence & Rang & Mot & Fréquence \\
+\midrule
+1 & trump & 73 933 & 1 & trump & 42 601 \\
+2 & people & 25 963 & 2 & \textbf{reuters} & \textbf{28 404} \\
+3 & president & 25 586 & 3 & president & 25 548 \\
+4 & \textbf{clinton} & \textbf{18 011} & 4 & state & 18 757 \\
+5 & \textbf{obama} & \textbf{17 813} & 5 & government & 17 980 \\
+6 & \textbf{donald} & \textbf{17 215} & 6 & states & 17 639 \\
+7 & news & 14 126 & 7 & house & 16 407 \\
+8 & \textbf{hillary} & \textbf{13 565} & 8 & also & 15 952 \\
+9 & white & 12 778 & 9 & united & 15 572 \\
+10 & time & 12 728 & 10 & republican & 15 292 \\
+11 & state & 12 525 & 11 & people & 15 117 \\
+12 & against & 11 029 & 12 & told & 14 244 \\
+13 & \textbf{media} & \textbf{10 982} & 13 & could & 13 705 \\
+14 & campaign & 10 571 & 14 & last & 12 614 \\
+15 & house & 10 556 & 15 & washington & 12 143 \\
+\bottomrule
+\end{tabular}
+\caption{Comparaison des 15 mots les plus fréquents (hors stop words courants).}
+\label{tab:wordcount}
+\end{table}
+
+\subsection{Interprétation des Résultats}
+
+Trois observations majeures et convaincantes ressortent de ce tableau :
+
+\begin{enumerate}
+    \item \textbf{Le Point Commun (Trump) :} Le mot "trump" domine les deux catégories. C'est attendu, car l'essentiel des articles (vrais et faux) a été rédigé durant l'élection et la présidence de Donald Trump. Cependant, il est notable que les articles "FAKE" le mentionnent \textbf{plus de 73\% plus souvent} que les articles "TRUE".
+
+    \item \textbf{La Signature "FAKE" (Personnalisation et Émotion) :}
+    La liste "FAKE" est dominée par des noms propres : \texttt{clinton}, \texttt{obama}, \texttt{donald}, \texttt{hillary}. Cela suggère que la désinformation est hautement \textbf{personnalisée} et se concentre sur des figures politiques spécifiques pour générer de l'engagement. De plus, la présence de \texttt{media} et \texttt{news} indique que les articles "FAKE" sont souvent auto-référentiels et cherchent à discréditer les sources d'information traditionnelles.
+
+    \item \textbf{La Signature "TRUE" (Institution et Source) :}
+    La découverte la plus significative est le mot \textbf{\texttt{reuters}} à la 2ème place des articles "TRUE". Notre jeu de données "TRUE" provient en grande partie de l'agence de presse Reuters. Les articles citent leur propre source ("(Reuters) - ..."), ce qui devient une signature involontaire mais puissante de l'authenticité.
+    De plus, des mots comme \texttt{government}, \texttt{state}, \texttt{republican}, \texttt{house} et \texttt{washington} montrent un vocabulaire beaucoup plus \textbf{institutionnel} et formel, centré sur les processus et les lieux de pouvoir plutôt que sur les individus.
+\end{enumerate}
+
+\section{Conclusion Générale}
+
+Ce projet a permis de réaliser une chaîne complète d'analyse Big Data, de l'ETL à l'analyse finale, malgré des défis techniques importants liés à l'environnement initial. La comparaison des outils a démontré une claire évolution des paradigmes :
+
+\begin{itemize}
+    \item \textbf{MapReduce (Java)} reste le moteur fondamental, mais sa complexité le rend impraticable pour un développement rapide.
+    \item \textbf{Pig et Hive} ont prouvé leur valeur en tant qu'outils d'abstraction essentiels. Pig s'est révélé supérieur pour le traitement de texte (NLP/ETL), tandis que Hive offre la puissance familière de SQL pour l'agrégation.
+    \item \textbf{Apache Spark} s'impose comme la solution moderne, combinant la vitesse du traitement \emph{in-memory} avec la flexibilité d'une API riche, capable de gérer aussi bien le SQL, le streaming que le dataflow.
+\end{itemize}
+
+L'analyse des résultats, bien que simple, a suffi à révéler une distinction claire entre le vocabulaire de la désinformation (personnalisé, émotionnel) et celui des nouvelles authentiques (institutionnel, factuel et sourcé). La persévérance face aux problèmes d'environnement a également permis de renforcer la compréhension pratique de la configuration et des dépendances de l'écosystème Hadoop.
+
+\end{document}
+
