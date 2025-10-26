@@ -33,4 +33,3 @@ All the code for the different implementations (Java MapReduce, Pig script, Hive
 The analysis revealed distinct lexical patterns between fake and real news articles. Fake news tended to heavily feature specific political figures and terms related to media, while real news (sourced largely from Reuters) often included institutional terms and cited the source itself.
 
 ---
-*Feel free to adapt this, especially the "How to Run" section if you want to add specific instructions.*
